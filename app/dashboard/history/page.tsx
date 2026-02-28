@@ -3,37 +3,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  History,
-  MessageSquare,
-  Bot,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  RefreshCw,
-  CheckCircle2,
-  Clock,
+  History, MessageSquare, Bot, ChevronDown, ChevronUp,
+  Loader2, RefreshCw, CheckCircle2, Clock, ImageIcon,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 interface ConversationEntry {
   queryId: string | null;
-  service: {
-    id: string;
-    name: string;
-    serviceCode: string;
-    logoEmoji: string;
-  };
+  service: { id: string; name: string; serviceCode: string; logoEmoji: string };
   question: {
     id: string;
     content: string;
     createdAt: string;
+    imageUrls: string[] | null;
   };
-  answer: {
-    id: string;
-    content: string;
-    createdAt: string;
-  } | null;
+  answer: { id: string; content: string; createdAt: string } | null;
 }
 
 interface Membership {
@@ -42,42 +27,38 @@ interface Membership {
 
 function ConversationCard({ conv }: { conv: ConversationEntry }) {
   const [expanded, setExpanded] = useState(false);
+  const [showAllImages, setShowAllImages] = useState(false);
   const isAnswered = conv.answer !== null;
+  const imageUrls = conv.question.imageUrls ?? [];
 
   return (
-    <div
-      className={`border-3 border-neo-black bg-white transition-shadow ${
-        expanded ? 'shadow-brutal' : 'shadow-brutal-sm hover:shadow-brutal'
-      }`}
-    >
-      {/* Card header — always visible, click to expand */}
+    <div className={`border-3 border-neo-black bg-white transition-shadow ${expanded ? 'shadow-brutal' : 'shadow-brutal-sm hover:shadow-brutal'}`}>
+
+      {/* Card header — click to expand */}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         className="w-full text-left p-4 flex items-start gap-3 group"
       >
-        {/* Status dot */}
         <div className="mt-0.5 shrink-0">
-          {isAnswered ? (
-            <CheckCircle2 size={18} className="text-neo-green" />
-          ) : (
-            <Clock size={18} className="text-neo-black/30 animate-pulse" />
-          )}
+          {isAnswered
+            ? <CheckCircle2 size={18} className="text-neo-green" />
+            : <Clock size={18} className="text-neo-black/30 animate-pulse" />
+          }
         </div>
 
         <div className="flex-1 min-w-0">
-          {/* Service + date row */}
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="font-display font-bold text-xs bg-neo-cream border-2 border-neo-black px-2 py-0.5">
               {conv.service.logoEmoji} {conv.service.name}
             </span>
-            {isAnswered ? (
-              <span className="font-display font-bold text-[10px] bg-neo-green border-2 border-neo-black px-2 py-0.5 uppercase tracking-wide">
-                Answered
-              </span>
-            ) : (
-              <span className="font-display font-bold text-[10px] bg-neo-yellow border-2 border-neo-black px-2 py-0.5 uppercase tracking-wide">
-                Pending review
+            {isAnswered
+              ? <span className="font-display font-bold text-[10px] bg-neo-green border-2 border-neo-black px-2 py-0.5 uppercase tracking-wide">Answered</span>
+              : <span className="font-display font-bold text-[10px] bg-neo-yellow border-2 border-neo-black px-2 py-0.5 uppercase tracking-wide">Pending review</span>
+            }
+            {imageUrls.length > 0 && (
+              <span className="flex items-center gap-1 font-display font-bold text-[10px] border-2 border-neo-black bg-neo-cream px-2 py-0.5">
+                <ImageIcon size={10} /> {imageUrls.length}
               </span>
             )}
             <span className="ml-auto font-mono text-xs text-neo-black/40 shrink-0">
@@ -85,12 +66,10 @@ function ConversationCard({ conv }: { conv: ConversationEntry }) {
             </span>
           </div>
 
-          {/* Question preview */}
           <p className="font-body text-sm text-neo-black leading-snug line-clamp-2">
             {conv.question.content}
           </p>
 
-          {/* Answer snippet when collapsed */}
           {!expanded && isAnswered && (
             <p className="font-body text-xs text-neo-black/50 mt-1.5 line-clamp-1">
               {conv.answer!.content.slice(0, 120)}…
@@ -98,24 +77,47 @@ function ConversationCard({ conv }: { conv: ConversationEntry }) {
           )}
         </div>
 
-        {/* Chevron */}
         <div className="shrink-0 mt-0.5 text-neo-black/40 group-hover:text-neo-black transition-colors">
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
       </button>
 
-      {/* Expanded body — full conversation thread */}
+      {/* Expanded body */}
       {expanded && (
         <div className="border-t-3 border-neo-black p-4 space-y-4 bg-neo-cream/40">
+
           {/* USER bubble */}
           <div className="flex justify-end">
-            <div className="max-w-[85%] space-y-1">
+            <div className="max-w-[85%] space-y-2">
               <div className="flex items-center gap-1.5 justify-end">
                 <MessageSquare size={11} className="text-neo-black/40" />
-                <span className="font-display font-bold text-[11px] text-neo-black/40 uppercase tracking-wide">
-                  You
-                </span>
+                <span className="font-display font-bold text-[11px] text-neo-black/40 uppercase tracking-wide">You</span>
               </div>
+
+              {/* Attached images */}
+              {imageUrls.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 justify-end">
+                  {(showAllImages ? imageUrls : imageUrls.slice(0, 3)).map((url, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={i}
+                      src={url}
+                      alt={`attachment ${i + 1}`}
+                      className="w-20 h-20 object-cover border-3 border-neo-black cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => window.open(url, '_blank')}
+                    />
+                  ))}
+                  {!showAllImages && imageUrls.length > 3 && (
+                    <button
+                      onClick={() => setShowAllImages(true)}
+                      className="w-20 h-20 border-3 border-neo-black bg-neo-cream font-display font-bold text-xs flex items-center justify-center hover:bg-neo-yellow transition-colors"
+                    >
+                      +{imageUrls.length - 3}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="bg-neo-black text-white border-3 border-neo-black px-4 py-2.5 font-body text-sm leading-relaxed whitespace-pre-wrap">
                 {conv.question.content}
               </div>
@@ -128,14 +130,11 @@ function ConversationCard({ conv }: { conv: ConversationEntry }) {
               <div className="max-w-[85%] space-y-1">
                 <div className="flex items-center gap-1.5">
                   <Bot size={11} className="text-neo-black/40" />
-                  <span className="font-display font-bold text-[11px] text-neo-black/40 uppercase tracking-wide">
-                    ReviewIQ
-                  </span>
-                  <span className="font-mono text-[10px] text-neo-black/30">
-                    · {formatDate(new Date(conv.answer!.createdAt))}
-                  </span>
+                  <span className="font-display font-bold text-[11px] text-neo-black/40 uppercase tracking-wide">ReviewIQ</span>
+                  <span className="font-mono text-[10px] text-neo-black/30">· {formatDate(new Date(conv.answer!.createdAt))}</span>
                 </div>
-                <div className="border-3 border-neo-black bg-white px-4 py-3 font-body text-sm leading-relaxed whitespace-pre-wrap">
+                {/* Scrollable answer box */}
+                <div className="border-3 border-neo-black bg-white px-4 py-3 font-body text-sm leading-relaxed whitespace-pre-wrap max-h-72 overflow-y-auto">
                   {conv.answer!.content}
                 </div>
               </div>
@@ -156,7 +155,6 @@ function ConversationCard({ conv }: { conv: ConversationEntry }) {
 
 export default function HistoryPage() {
   const searchParams = useSearchParams();
-
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [activeServiceId, setActiveServiceId] = useState<string>('');
   const [conversations, setConversations] = useState<ConversationEntry[]>([]);
@@ -200,13 +198,11 @@ export default function HistoryPage() {
     [activeServiceId]
   );
 
-  useEffect(() => {
-    loadConversations(true);
-  }, [loadConversations]);
+  useEffect(() => { loadConversations(true); }, [loadConversations]);
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
-      {/* Page header */}
+      {/* Header */}
       <div className="border-3 border-neo-black shadow-brutal bg-neo-yellow p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -223,14 +219,12 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* Service filter tabs */}
+      {/* Service filter */}
       {memberships.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           <button
             onClick={() => setActiveServiceId('')}
-            className={`flex items-center gap-2 px-4 py-2 border-3 border-neo-black font-display font-bold text-sm whitespace-nowrap transition-all ${
-              activeServiceId === '' ? 'bg-neo-black text-white' : 'bg-white hover:bg-neo-cream'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 border-3 border-neo-black font-display font-bold text-sm whitespace-nowrap transition-all ${activeServiceId === '' ? 'bg-neo-black text-white' : 'bg-white hover:bg-neo-cream'}`}
           >
             All Services
           </button>
@@ -238,9 +232,7 @@ export default function HistoryPage() {
             <button
               key={service.id}
               onClick={() => setActiveServiceId(service.id)}
-              className={`flex items-center gap-2 px-4 py-2 border-3 border-neo-black font-display font-bold text-sm whitespace-nowrap transition-all ${
-                activeServiceId === service.id ? 'bg-neo-black text-white' : 'bg-white hover:bg-neo-cream'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 border-3 border-neo-black font-display font-bold text-sm whitespace-nowrap transition-all ${activeServiceId === service.id ? 'bg-neo-black text-white' : 'bg-white hover:bg-neo-cream'}`}
             >
               {service.logoEmoji} {service.name}
             </button>
@@ -248,7 +240,7 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {/* Conversation list */}
+      {/* Conversations */}
       {loading ? (
         <div className="border-3 border-neo-black p-12 text-center bg-white">
           <div className="w-10 h-10 border-3 border-neo-black border-t-transparent rounded-full animate-spin mx-auto" />
@@ -257,15 +249,12 @@ export default function HistoryPage() {
         <div className="border-3 border-neo-black p-12 text-center bg-neo-cream">
           <History size={44} className="mx-auto mb-3 opacity-20" />
           <h3 className="font-display font-black text-lg mb-1">No conversations yet</h3>
-          <p className="font-body text-sm text-neo-black/50">
-            Questions you ask will appear here as conversation cards.
-          </p>
+          <p className="font-body text-sm text-neo-black/50">Questions you ask will appear here as conversation cards.</p>
         </div>
       ) : (
         <div className="space-y-3">
           <p className="font-display font-bold text-sm text-neo-black/50">
-            {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
-            {nextCursor ? ' · scroll for more' : ''}
+            {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}{nextCursor ? ' · scroll for more' : ''}
           </p>
 
           {conversations.map((conv) => (
@@ -274,12 +263,7 @@ export default function HistoryPage() {
 
           {nextCursor && (
             <div className="text-center pt-2">
-              <Button
-                variant="white"
-                onClick={() => loadConversations(false, nextCursor)}
-                loading={loadingMore}
-                className="gap-2"
-              >
+              <Button variant="white" onClick={() => loadConversations(false, nextCursor)} loading={loadingMore} className="gap-2">
                 Load older conversations
               </Button>
             </div>

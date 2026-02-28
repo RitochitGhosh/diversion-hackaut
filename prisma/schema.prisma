@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 model Service {
@@ -122,12 +124,12 @@ model KnowledgeDocument {
 }
 
 model KnowledgeChunk {
-  id            String   @id @default(cuid())
-  content       String   @db.Text
-  embeddingJson String   @db.Text  // JSON float[] — 768-dim Gemini embedding
-  chunkIndex    Int
-  documentId    String
-  document      KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  id         String                      @id @default(cuid())
+  content    String                      @db.Text
+  embedding  Unsupported("vector(768)")?  // pgvector — 768-dim Gemini embedding
+  chunkIndex Int
+  documentId String
+  document   KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
 }

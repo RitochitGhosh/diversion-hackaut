@@ -1,7 +1,7 @@
 import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { chunkText, embedChunks } from '@/lib/rag';
+import { chunkText, embedChunks, storeChunks } from '@/lib/rag';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,30 +67,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to generate embeddings. Check your Google AI API key.' }, { status: 500 });
     }
 
-    // Save document + chunks in a transaction
-    const doc = await db.$transaction(async (tx) => {
-      const document = await tx.knowledgeDocument.create({
-        data: {
-          title: title.trim(),
-          fileName,
-          content: content.trim(),
-          chunkCount: chunks.length,
-          serviceId,
-          uploadedById: member.id,
-        },
-      });
-
-      await tx.knowledgeChunk.createMany({
-        data: chunks.map((chunk, i) => ({
-          content: chunk,
-          embeddingJson: JSON.stringify(embeddings[i]),
-          chunkIndex: i,
-          documentId: document.id,
-        })),
-      });
-
-      return document;
+    // Save document first, then store chunks with pgvector embeddings
+    const doc = await db.knowledgeDocument.create({
+      data: {
+        title: title.trim(),
+        fileName,
+        content: content.trim(),
+        chunkCount: chunks.length,
+        serviceId,
+        uploadedById: member.id,
+      },
     });
+
+    try {
+      await storeChunks(doc.id, chunks, embeddings);
+    } catch (chunkError) {
+      // Clean up document if chunk storage fails
+      await db.knowledgeDocument.delete({ where: { id: doc.id } });
+      throw chunkError;
+    }
 
     return NextResponse.json({ document: { ...doc, chunkCount: chunks.length } }, { status: 201 });
   } catch (error) {

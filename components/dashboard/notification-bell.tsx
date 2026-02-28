@@ -43,11 +43,9 @@ export function NotificationBell() {
     }
   };
 
-  // Initial fetch + 30-second poll
+  // Initial fetch only — use the bell button to refresh manually
   useEffect(() => {
     fetchNotifications();
-    const id = setInterval(fetchNotifications, 30_000);
-    return () => clearInterval(id);
   }, []);
 
   // Close dropdown on outside click
@@ -79,7 +77,7 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       {/* Bell button */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { setOpen((v) => !v); if (!open) fetchNotifications(); }}
         aria-label="Notifications"
         className="relative w-9 h-9 border-3 border-neo-black shadow-brutal-sm flex items-center justify-center hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
       >

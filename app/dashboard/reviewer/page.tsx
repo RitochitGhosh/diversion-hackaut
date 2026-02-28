@@ -55,13 +55,6 @@ export default function ReviewerPage() {
     if (activeServiceId) loadReviewQueue();
   }, [activeServiceId, loadReviewQueue]);
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!activeServiceId) return;
-    const interval = setInterval(() => loadReviewQueue(true), 30000);
-    return () => clearInterval(interval);
-  }, [activeServiceId, loadReviewQueue]);
-
   const activeService = memberships.find(m => m.service.id === activeServiceId);
 
   return (
@@ -144,7 +137,7 @@ export default function ReviewerPage() {
           <Inbox size={48} className="mx-auto mb-4 opacity-40" />
           <h3 className="font-display font-black text-xl mb-2">Queue is Empty!</h3>
           <p className="font-body text-sm text-neo-black/60 mb-4">
-            No queries waiting for review. Auto-refreshes every 30 seconds.
+            No queries waiting for review. Click refresh to check for new queries.
           </p>
           <Button variant="black" onClick={() => loadReviewQueue()} size="sm">
             <RefreshCw size={14} /> Check Now

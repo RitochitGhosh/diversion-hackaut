@@ -121,18 +121,13 @@ export async function POST(request: NextRequest) {
       )
     );
 
-    // Run agent pipeline — augment content with image context for the AI
-    const contentForAI =
-      validImageUrls.length > 0
-        ? `${content.trim()}\n\n[User has attached ${validImageUrls.length} image(s) for reference: ${validImageUrls.join(', ')}]`
-        : content.trim();
-
     try {
       const agentResult = await generateInitialDraftWithAgent(
-        contentForAI,
+        content.trim(),
         member.service.name,
         serviceId,
-        member.service.systemPrompt
+        member.service.systemPrompt,
+        validImageUrls
       );
 
       const updated = await db.query.update({

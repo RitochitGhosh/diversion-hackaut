@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, type Part } from '@google/generative-ai';
 import { routeQuery, webSearch } from './search';
 import { findRelevantChunks } from './rag';
 import { env } from './env';
@@ -30,6 +30,18 @@ export interface AgentResult {
 }
 
 
+async function fetchImagePart(url: string): Promise<Part | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) return null;
+    const mimeType = (res.headers.get('content-type') ?? 'image/jpeg').split(';')[0];
+    const buffer = await res.arrayBuffer();
+    return { inlineData: { mimeType, data: Buffer.from(buffer).toString('base64') } };
+  } catch {
+    return null;
+  }
+}
+
 async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 8000): Promise<T> {
   try {
     return await fn();
@@ -48,7 +60,8 @@ export async function generateInitialDraftWithAgent(
   query: string,
   serviceName: string,
   serviceId: string,
-  systemPrompt?: string | null
+  systemPrompt?: string | null,
+  imageUrls?: string[]
 ): Promise<AgentResult> {
   const agentLog: AgentLog = {
     usedSearch: false,
@@ -73,7 +86,6 @@ export async function generateInitialDraftWithAgent(
       const searchQuery = routing.searchQuery || query;
       agentLog.searchQuery = searchQuery;
       const results = await webSearch(searchQuery);
-      console.log("SELECTED_WEB_PATH: ", results);
       if (results.length > 0) {
         agentLog.usedSearch = true;
         for (const r of results) {
@@ -109,7 +121,7 @@ export async function generateInitialDraftWithAgent(
   }
 
   // Step 4: Generate Draft with context
-  const draft = await generateDraftWithContext(query, serviceName, sources, systemPrompt);
+  const draft = await generateDraftWithContext(query, serviceName, sources, systemPrompt, imageUrls);
 
   return { draft, sources, agentLog };
 }
@@ -118,7 +130,8 @@ async function generateDraftWithContext(
   query: string,
   serviceName: string,
   sources: Source[],
-  systemPrompt?: string | null
+  systemPrompt?: string | null,
+  imageUrls?: string[]
 ): Promise<string> {
   const model = genAI.getGenerativeModel({ model: DRAFT_MODEL });
 
@@ -148,9 +161,15 @@ async function generateDraftWithContext(
 
 User Query: ${query}
 ${hasContext ? contextSection : ''}
-${hasContext ? 'Using the context above where relevant,' : ''} Provide a clear, accurate, and concise draft response (2-3 paragraphs). This is a DRAFT for human review. Reference sources when used.`;
+${hasContext ? 'Using the context above where relevant,' : ''} Provide a clear, accurate, and concise draft response (2-3 paragraphs). This is a DRAFT for human review. Reference sources when used.${imageUrls?.length ? ' The user has attached image(s) — analyze them and incorporate relevant observations into your response.' : ''}`;
 
-  const result = await withRetry(() => model.generateContent(prompt));
+  // Fetch images in parallel and build content parts
+  const imageParts: Part[] = imageUrls?.length
+    ? (await Promise.all(imageUrls.map(fetchImagePart))).filter((p): p is Part => p !== null)
+    : [];
+
+  const contentParts: Part[] = [{ text: prompt }, ...imageParts];
+  const result = await withRetry(() => model.generateContent(contentParts));
   return result.response.text();
 }
 

@@ -44,12 +44,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ conversations: [], nextCursor: null });
     }
 
-    // Batch-fetch the corresponding ASSISTANT messages by queryId
+    // Batch-fetch the corresponding ASSISTANT messages and query imageUrls
     const queryIds = userMessages.map((m) => m.queryId).filter(Boolean) as string[];
-    const assistantMessages = await db.message.findMany({
-      where: { queryId: { in: queryIds }, role: 'ASSISTANT' },
-    });
+    const [assistantMessages, queries] = await Promise.all([
+      db.message.findMany({ where: { queryId: { in: queryIds }, role: 'ASSISTANT' } }),
+      db.query.findMany({ where: { id: { in: queryIds } }, select: { id: true, imageUrls: true } }),
+    ]);
     const answerByQueryId = new Map(assistantMessages.map((m) => [m.queryId, m]));
+    const imageUrlsByQueryId = new Map(queries.map((q) => [q.id, q.imageUrls]));
 
     const conversations = userMessages.map((question) => ({
       queryId: question.queryId,
@@ -58,6 +60,7 @@ export async function GET(request: NextRequest) {
         id: question.id,
         content: question.content,
         createdAt: question.createdAt,
+        imageUrls: (question.queryId ? (imageUrlsByQueryId.get(question.queryId) ?? null) : null) as string[] | null,
       },
       answer: question.queryId
         ? (answerByQueryId.get(question.queryId)

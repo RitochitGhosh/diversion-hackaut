@@ -61,13 +61,6 @@ export default function QueriesPage() {
     if (activeServiceId) loadQueries();
   }, [activeServiceId, statusFilter, mineOnly, loadQueries]);
 
-  // Auto-refresh every 15s to catch status updates
-  useEffect(() => {
-    if (!activeServiceId) return;
-    const interval = setInterval(loadQueries, 15000);
-    return () => clearInterval(interval);
-  }, [activeServiceId, loadQueries]);
-
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
       {/* Header */}
