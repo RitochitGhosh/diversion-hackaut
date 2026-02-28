@@ -23,7 +23,7 @@ export default function AdminPage() {
   );
 
   // Create service form
-  const [createForm, setCreateForm] = useState({ name: '', description: '', logoEmoji: '🏢' });
+  const [createForm, setCreateForm] = useState({ name: '', description: '', systemPrompt: '', logoEmoji: '🏢' });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createdService, setCreatedService] = useState<any>(null);
@@ -59,6 +59,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           serviceName: createForm.name,
           description: createForm.description,
+          systemPrompt: createForm.systemPrompt,
           logoEmoji: createForm.logoEmoji,
         }),
       });
@@ -203,7 +204,7 @@ export default function AdminPage() {
                   </p>
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="yellow" onClick={() => { setCreatedService(null); setCreateForm({ name: '', description: '', logoEmoji: '🏢' }); }} className="flex-1">Create Another</Button>
+                  <Button variant="yellow" onClick={() => { setCreatedService(null); setCreateForm({ name: '', description: '', systemPrompt: '', logoEmoji: '🏢' }); }} className="flex-1">Create Another</Button>
                   <Button variant="black" onClick={() => router.push('/dashboard/reviewer')} className="flex-1">Go to Review Queue</Button>
                 </div>
               </div>
@@ -243,6 +244,19 @@ export default function AdminPage() {
                   onChange={(e) => setCreateForm(f => ({ ...f, description: e.target.value }))}
                   rows={3}
                 />
+                <div>
+                  <Textarea
+                    label="System Prompt *"
+                    placeholder="Describe how the AI should behave for this service. E.g. 'You are a technical support assistant for Acme Corp. Always be concise, professional, and reference our documentation when applicable.'"
+                    value={createForm.systemPrompt}
+                    onChange={(e) => setCreateForm(f => ({ ...f, systemPrompt: e.target.value }))}
+                    rows={5}
+                    required
+                  />
+                  <p className="text-xs font-body text-neo-black/50 mt-1">
+                    This prompt guides the AI when generating draft responses for your service. Be specific about tone, domain, and any constraints.
+                  </p>
+                </div>
                 {createError && (
                   <div className="border-3 border-red-600 bg-red-50 p-3">
                     <p className="font-display font-bold text-sm text-red-700">{createError}</p>

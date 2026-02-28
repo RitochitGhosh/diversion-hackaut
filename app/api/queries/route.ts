@@ -131,7 +131,8 @@ export async function POST(request: NextRequest) {
       const agentResult = await generateInitialDraftWithAgent(
         contentForAI,
         member.service.name,
-        serviceId
+        serviceId,
+        member.service.systemPrompt
       );
 
       const updated = await db.query.update({

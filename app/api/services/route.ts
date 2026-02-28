@@ -16,10 +16,13 @@ export async function POST(request: NextRequest) {
 
     const { sub: userId, email, name, picture } = session.user;
     const body = await request.json();
-    const { serviceName, description, logoEmoji } = body;
+    const { serviceName, description, logoEmoji, systemPrompt } = body;
 
     if (!serviceName?.trim()) {
       return NextResponse.json({ error: 'Service name is required' }, { status: 400 });
+    }
+    if (!systemPrompt?.trim()) {
+      return NextResponse.json({ error: 'System prompt is required' }, { status: 400 });
     }
 
     // --- Plan limit: max services per user ---
@@ -44,6 +47,7 @@ export async function POST(request: NextRequest) {
         serviceCode,
         name: serviceName.trim(),
         description: description?.trim() || null,
+        systemPrompt: systemPrompt.trim(),
         logoEmoji: logoEmoji || '🏢',
         ownerId: userId,
         members: {

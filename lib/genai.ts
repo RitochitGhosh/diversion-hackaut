@@ -47,7 +47,8 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 8000): 
 export async function generateInitialDraftWithAgent(
   query: string,
   serviceName: string,
-  serviceId: string
+  serviceId: string,
+  systemPrompt?: string | null
 ): Promise<AgentResult> {
   const agentLog: AgentLog = {
     usedSearch: false,
@@ -107,8 +108,8 @@ export async function generateInitialDraftWithAgent(
     console.error('[Agent] RAG retrieval failed:', e);
   }
 
-  // Step 4: Generate Draft with context 
-  const draft = await generateDraftWithContext(query, serviceName, sources);
+  // Step 4: Generate Draft with context
+  const draft = await generateDraftWithContext(query, serviceName, sources, systemPrompt);
 
   return { draft, sources, agentLog };
 }
@@ -116,7 +117,8 @@ export async function generateInitialDraftWithAgent(
 async function generateDraftWithContext(
   query: string,
   serviceName: string,
-  sources: Source[]
+  sources: Source[],
+  systemPrompt?: string | null
 ): Promise<string> {
   const model = genAI.getGenerativeModel({ model: DRAFT_MODEL });
 
@@ -138,7 +140,11 @@ async function generateDraftWithContext(
   }
 
   const hasContext = sources.length > 0;
-  const prompt = `You are a helpful AI assistant for "${serviceName}". A user has submitted the following query that will be reviewed by a human expert.
+  const systemInstruction = systemPrompt?.trim()
+    ? `${systemPrompt.trim()}\n\n`
+    : `You are a helpful AI assistant for "${serviceName}".\n\n`;
+
+  const prompt = `${systemInstruction}A user has submitted the following query that will be reviewed by a human expert.
 
 User Query: ${query}
 ${hasContext ? contextSection : ''}
@@ -155,7 +161,8 @@ export async function generateDetailedAnswer(
   reviewedContent: string,
   reviewerNote: string | null,
   serviceName: string,
-  sources: Source[] = []
+  sources: Source[] = [],
+  systemPrompt?: string | null
 ): Promise<string> {
   const model = genAI.getGenerativeModel({ model: FINAL_MODEL });
 
@@ -168,7 +175,11 @@ export async function generateDetailedAnswer(
       ? `\n\nSources used:\n${sources.map((s) => `- ${s.type === 'web' ? '🌐' : '📚'} ${s.title}${s.url ? ` — ${s.url}` : ''}`).join('\n')}`
       : '';
 
-  const prompt = `You are a helpful AI assistant for "${serviceName}". A human expert has reviewed and approved an AI draft.
+  const systemInstruction = systemPrompt?.trim()
+    ? `${systemPrompt.trim()}\n\n`
+    : `You are a helpful AI assistant for "${serviceName}".\n\n`;
+
+  const prompt = `${systemInstruction}A human expert has reviewed and approved an AI draft.
 
 Original User Query:
 ${originalQuery}

@@ -62,13 +62,10 @@ export function QueryForm({ serviceId, onQuerySubmitted }: QueryFormProps) {
       uploading: true,
     }));
 
-    setImages((prev) => {
-      const merged = [...prev, ...newImages];
-      // Kick off uploads
-      newImages.forEach((img, idx) => {
-        uploadOne(img, prev.length + idx);
-      });
-      return merged;
+    const startIdx = images.length;
+    setImages((prev) => [...prev, ...newImages]);
+    newImages.forEach((img, idx) => {
+      uploadOne(img, startIdx + idx);
     });
 
     // Reset input so same file can be re-selected

@@ -8,14 +8,15 @@ datasource db {
 }
 
 model Service {
-  id          String   @id @default(cuid())
-  serviceCode String   @unique
-  name        String
-  description String?
-  logoEmoji   String   @default("🏢")
-  ownerId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  serviceCode  String   @unique
+  name         String
+  description  String?
+  systemPrompt String?  @db.Text
+  logoEmoji    String   @default("🏢")
+  ownerId      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   members       ServiceMember[]
   queries       Query[]

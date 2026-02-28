@@ -84,7 +84,8 @@ export async function POST(
         contentToUse,
         note ?? null,
         query.service.name,
-        sources
+        sources,
+        query.service.systemPrompt
       );
       await db.query.update({ where: { id: queryId }, data: { finalAnswer, status: 'ANSWERED' } });
 
