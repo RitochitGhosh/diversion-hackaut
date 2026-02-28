@@ -10,7 +10,6 @@ function lsHeaders() {
   };
 }
 
-/** Create a LemonSqueezy checkout URL for upgrading to a plan. */
 export async function createCheckout(
   variantId: string,
   userId: string,
