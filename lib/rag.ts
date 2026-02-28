@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, TaskType } from '@google/generative-ai';
+import { GoogleGenerativeAI, TaskType, type EmbedContentRequest } from '@google/generative-ai';
 import { db } from './db';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
@@ -52,11 +52,13 @@ export async function embedText(
   taskType: TaskType = TaskType.RETRIEVAL_DOCUMENT
 ): Promise<number[]> {
   const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' }); // TODO: Add in .env
+  // outputDimensionality is supported by the gemini-embedding-001 REST API but
+  // not yet reflected in the SDK v0.21.0 TypeScript types — cast to pass it through.
   const result = await model.embedContent({
     content: { role: 'user', parts: [{ text: text.slice(0, 2048) }] },
     taskType,
     outputDimensionality: 768,
-  });
+  } as EmbedContentRequest & { outputDimensionality: number });
   return result.embedding.values;
 }
 
