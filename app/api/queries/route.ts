@@ -2,12 +2,29 @@ import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateInitialDraftWithAgent } from '@/lib/genai';
+import { publishNotification } from '@/lib/rabbitmq';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 
 export const dynamic = 'force-dynamic';
+
+const MIN_QUERY_LENGTH = 20;
 
 // POST /api/queries - submit a new query (all roles)
 export async function POST(request: NextRequest) {
   try {
+    // --- IP Rate Limiting ---
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(ip);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: `Too many requests. Please wait ${rateLimit.retryAfter}s before submitting again.` },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rateLimit.retryAfter) },
+        }
+      );
+    }
+
     const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,8 +34,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { content, serviceId } = body;
 
+    // --- Content Validation ---
     if (!content?.trim()) {
       return NextResponse.json({ error: 'Query content is required' }, { status: 400 });
+    }
+    if (content.trim().length < MIN_QUERY_LENGTH) {
+      return NextResponse.json(
+        { error: `Query must be at least ${MIN_QUERY_LENGTH} characters long. Please provide more detail.` },
+        { status: 400 }
+      );
     }
     if (!serviceId) {
       return NextResponse.json({ error: 'Service ID is required' }, { status: 400 });
@@ -43,6 +67,34 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Persist user message for conversation history
+    await db.message.create({
+      data: {
+        role: 'USER',
+        content: content.trim(),
+        userId,
+        serviceId,
+        queryId: query.id,
+      },
+    });
+
+    // Notify ADMIN and REVIEWER members that a new query needs review
+    const privilegedMembers = await db.serviceMember.findMany({
+      where: { serviceId, role: { in: ['ADMIN', 'REVIEWER'] } },
+    });
+    await Promise.all(
+      privilegedMembers.map((m) =>
+        publishNotification({
+          userId: m.userId,
+          type: 'QUERY_SUBMITTED',
+          title: 'New query submitted',
+          message: `${member.name ?? member.email} submitted a query: "${content.trim().slice(0, 60)}${content.trim().length > 60 ? '…' : ''}"`,
+          queryId: query.id,
+          serviceId,
+        })
+      )
+    );
+
     // Run agent pipeline
     try {
       const agentResult = await generateInitialDraftWithAgent(
@@ -60,6 +112,20 @@ export async function POST(request: NextRequest) {
           agentLog: agentResult.agentLog as any,
         },
       });
+
+      // Notify reviewers that AI draft is ready
+      await Promise.all(
+        privilegedMembers.map((m) =>
+          publishNotification({
+            userId: m.userId,
+            type: 'QUERY_PENDING_REVIEW',
+            title: 'AI draft ready for review',
+            message: `A query from ${member.name ?? member.email} has an AI draft waiting for your review.`,
+            queryId: query.id,
+            serviceId,
+          })
+        )
+      );
 
       return NextResponse.json({ query: updated }, { status: 201 });
     } catch (aiError) {

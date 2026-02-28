@@ -1,7 +1,8 @@
 'use client';
 
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Bell, LogOut, ChevronDown, User } from 'lucide-react';
+import { LogOut, ChevronDown, User } from 'lucide-react';
+import { NotificationBell } from './notification-bell';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -52,10 +53,7 @@ export function Navbar({ serviceName, serviceCode, role }: NavbarProps) {
 
         {/* Right actions */}
         <div className="flex items-center gap-3">
-          <button className="relative w-9 h-9 border-3 border-neo-black shadow-brutal-sm flex items-center justify-center hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
-            <Bell size={16} />
-            <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-neo-orange border border-neo-black rounded-full" />
-          </button>
+          <NotificationBell />
 
           {/* User menu */}
           <div className="relative">

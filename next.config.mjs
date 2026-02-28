@@ -8,7 +8,8 @@ const nextConfig = {
     ],
   },
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
+    serverComponentsExternalPackages: ['@prisma/client', 'amqplib'],
+    instrumentationHook: true,
   },
 };
 

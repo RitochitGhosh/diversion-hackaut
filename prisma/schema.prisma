@@ -20,6 +20,8 @@ model Service {
   members       ServiceMember[]
   queries       Query[]
   knowledgeDocs KnowledgeDocument[]
+  subscription  Subscription?
+  messages      Message[]
 
   @@index([ownerId])
 }
@@ -126,4 +128,50 @@ model KnowledgeChunk {
   document      KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
+}
+
+model Subscription {
+  id            String    @id @default(cuid())
+  serviceId     String    @unique
+  service       Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  tier          String    @default("FREE") // FREE | PRO | ENTERPRISE
+  algoTxId      String?   @unique
+  walletAddress String?
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  role      MessageRole
+  content   String      @db.Text
+  userId    String      // Auth0 sub of the user who owns this conversation
+  serviceId String
+  service   Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  queryId   String?     // Links USER + ASSISTANT messages that belong to the same query
+  createdAt DateTime    @default(now())
+
+  @@index([userId, serviceId, createdAt(sort: Desc)])
+  @@index([queryId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   // Auth0 sub of the recipient
+  type      String   // QUERY_SUBMITTED | QUERY_ANSWERED | QUERY_REJECTED | QUERY_PENDING_REVIEW
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  queryId   String?
+  serviceId String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId])
 }

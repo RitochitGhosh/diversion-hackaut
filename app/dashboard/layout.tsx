@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/dashboard/navbar';
 import { db } from '@/lib/db';
 import Link from 'next/link';
-import { LayoutDashboard, ClipboardList, MessageSquare, Settings, BookOpen, Share2 } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, MessageSquare, Settings, BookOpen, Share2, History } from 'lucide-react';
 
 export default async function DashboardLayout({
   children,
@@ -32,6 +32,7 @@ export default async function DashboardLayout({
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
     ...(isPrivileged ? [{ href: '/dashboard/reviewer', label: 'Review Queue', icon: ClipboardList }] : []),
     { href: '/dashboard/queries', label: 'My Queries', icon: MessageSquare },
+    { href: '/dashboard/history', label: 'History', icon: History },
     ...(isPrivileged ? [{ href: '/dashboard/knowledge', label: 'Knowledge Base', icon: BookOpen }] : []),
     ...(membership?.role === 'ADMIN'
       ? [{ href: '/dashboard/admin', label: 'Admin', icon: Settings }]
