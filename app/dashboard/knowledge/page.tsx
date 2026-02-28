@@ -73,9 +73,19 @@ export default function KnowledgePage() {
     e.preventDefault();
     if (!activeServiceId || uploading) return;
 
-    setUploading(true);
     setUploadError('');
     setUploadSuccess('');
+
+    if (uploadTab === 'file' && !selectedFile) {
+      setUploadError('Please select a file to upload.');
+      return;
+    }
+    if (uploadTab === 'text' && !textContent.trim()) {
+      setUploadError('Please enter some content.');
+      return;
+    }
+
+    setUploading(true);
 
     try {
       let res: Response;
@@ -87,7 +97,6 @@ export default function KnowledgePage() {
         formData.append('file', selectedFile);
         res = await fetch('/api/knowledge', { method: 'POST', body: formData });
       } else {
-        if (!textContent.trim()) throw new Error('Content is required');
         res = await fetch('/api/knowledge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -218,12 +227,12 @@ export default function KnowledgePage() {
                   <p className="font-display font-bold text-sm">
                     {selectedFile ? selectedFile.name : 'Click to select file'}
                   </p>
-                  <p className="text-xs font-body text-neo-black/40 mt-1">Supports .txt, .md files</p>
+                  <p className="text-xs font-body text-neo-black/40 mt-1">Supports .txt and .md files</p>
                 </div>
                 <input
                   ref={fileRef}
                   type="file"
-                  accept=".txt,.md,.csv"
+                  accept=".txt,.md"
                   className="hidden"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
                 />
@@ -243,7 +252,13 @@ export default function KnowledgePage() {
               </p>
             </div>
 
-            <Button type="submit" variant="purple" loading={uploading} className="w-full gap-2">
+            <Button
+              type="submit"
+              variant="purple"
+              loading={uploading}
+              disabled={uploadTab === 'file' ? !selectedFile : !textContent.trim()}
+              className="w-full gap-2"
+            >
               <Upload size={14} />
               {uploading ? 'Processing & Embedding...' : 'Upload & Index Document'}
             </Button>
