@@ -1,14 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { routeQuery, webSearch } from './search';
 import { findRelevantChunks } from './rag';
+import { env } from './env';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
-// gemini-2.5-flash works on free tier; gemini-2.5-pro has no free-tier quota
-const DRAFT_MODEL = 'gemini-2.5-flash';
-const FINAL_MODEL = 'gemini-2.5-flash';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
+const DRAFT_MODEL = env.DRAFT_GEMINI_MODEL;
+const FINAL_MODEL = env.FINAL_GEMINI_MODEL;
 
 export interface Source {
   type: 'web' | 'rag';
@@ -31,7 +29,6 @@ export interface AgentResult {
   agentLog: AgentLog;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 8000): Promise<T> {
   try {
@@ -46,7 +43,6 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 8000): 
   }
 }
 
-// ─── Agent Pipeline ──────────────────────────────────────────────────────────
 
 export async function generateInitialDraftWithAgent(
   query: string,
@@ -61,21 +57,22 @@ export async function generateInitialDraftWithAgent(
   };
   const sources: Source[] = [];
 
-  // ── Step 1: Route ──────────────────────────────────────────────────────────
+  // Step 1: Route
   let routing = { needsSearch: false, reason: '', searchQuery: '' };
   try {
     routing = await routeQuery(query);
-    agentLog.routingReason = routing.reason;
+    agentLog.routingReason = routing.reason; // Showcase the reason to end-user + confidence
   } catch (e) {
     console.error('[Agent] Routing failed:', e);
   }
 
-  // ── Step 2: Web Search (if needed) ────────────────────────────────────────
+  // Step 2: Web Search (if needed) 
   if (routing.needsSearch) {
     try {
       const searchQuery = routing.searchQuery || query;
       agentLog.searchQuery = searchQuery;
       const results = await webSearch(searchQuery);
+      console.log("SELECTED_WEB_PATH: ", results);
       if (results.length > 0) {
         agentLog.usedSearch = true;
         for (const r of results) {
@@ -92,7 +89,7 @@ export async function generateInitialDraftWithAgent(
     }
   }
 
-  // ── Step 3: RAG Retrieval ──────────────────────────────────────────────────
+  //  Step 3: RAG Retrieval 
   try {
     const chunks = await findRelevantChunks(query, serviceId);
     if (chunks.length > 0) {
@@ -110,7 +107,7 @@ export async function generateInitialDraftWithAgent(
     console.error('[Agent] RAG retrieval failed:', e);
   }
 
-  // ── Step 4: Generate Draft with context ───────────────────────────────────
+  // Step 4: Generate Draft with context 
   const draft = await generateDraftWithContext(query, serviceName, sources);
 
   return { draft, sources, agentLog };
