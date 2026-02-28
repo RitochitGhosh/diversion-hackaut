@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/dashboard/navbar';
 import { db } from '@/lib/db';
 import Link from 'next/link';
-import { LayoutDashboard, ClipboardList, MessageSquare, Settings, Users } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, MessageSquare, Settings, BookOpen, Share2 } from 'lucide-react';
 
 export default async function DashboardLayout({
   children,
@@ -26,13 +26,16 @@ export default async function DashboardLayout({
     orderBy: { createdAt: 'asc' }, // Prefer first created (usually their own service)
   });
 
+  const isPrivileged = membership?.role === 'ADMIN' || membership?.role === 'REVIEWER';
+
   const navLinks = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-    { href: '/dashboard/reviewer', label: 'Review Queue', icon: ClipboardList },
+    ...(isPrivileged ? [{ href: '/dashboard/reviewer', label: 'Review Queue', icon: ClipboardList }] : []),
     { href: '/dashboard/queries', label: 'My Queries', icon: MessageSquare },
+    ...(isPrivileged ? [{ href: '/dashboard/knowledge', label: 'Knowledge Base', icon: BookOpen }] : []),
     ...(membership?.role === 'ADMIN'
       ? [{ href: '/dashboard/admin', label: 'Admin', icon: Settings }]
-      : []),
+      : [{ href: '/dashboard/admin', label: 'Services', icon: Settings }]),
   ];
 
   return (
@@ -61,9 +64,18 @@ export default async function DashboardLayout({
           </nav>
 
           {membership && (
-            <div className="p-3 border-t-3 border-neo-black">
+            <div className="p-3 border-t-3 border-neo-black space-y-2">
+              <div className="border-3 border-neo-black bg-neo-yellow p-3">
+                <p className="font-display font-bold text-xs uppercase tracking-wide mb-1 flex items-center gap-1">
+                  <Share2 size={11} /> User Page
+                </p>
+                <p className="font-mono font-bold text-xs text-neo-black break-all">
+                  /s/{membership.service.serviceCode}
+                </p>
+                <p className="text-xs text-neo-black/50 font-body mt-1">Share with end users</p>
+              </div>
               <div className="border-3 border-neo-black bg-neo-cream p-3">
-                <p className="font-display font-bold text-xs uppercase tracking-wide mb-1">Service Code</p>
+                <p className="font-display font-bold text-xs uppercase tracking-wide mb-1">Reviewer Code</p>
                 <p className="font-mono font-bold text-sm text-neo-black">{membership.service.serviceCode}</p>
                 <p className="text-xs text-neo-black/50 font-body mt-1">Share to invite reviewers</p>
               </div>

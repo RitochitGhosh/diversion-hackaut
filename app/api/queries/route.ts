@@ -1,11 +1,11 @@
 import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { generateInitialDraft } from '@/lib/genai';
+import { generateInitialDraftWithAgent } from '@/lib/genai';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/queries - submit a new query
+// POST /api/queries - submit a new query (all roles)
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Service ID is required' }, { status: 400 });
     }
 
-    // Verify user is a member of this service
     const member = await db.serviceMember.findUnique({
       where: { userId_serviceId: { userId, serviceId } },
       include: { service: true },
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You are not a member of this service' }, { status: 403 });
     }
 
-    // Create query record
+    // Create query
     const query = await db.query.create({
       data: {
         content: content.trim(),
@@ -44,21 +43,31 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Generate AI draft (async in same request for simplicity)
+    // Run agent pipeline
     try {
-      const aiDraft = await generateInitialDraft(content.trim(), member.service.name);
-      await db.query.update({
+      const agentResult = await generateInitialDraftWithAgent(
+        content.trim(),
+        member.service.name,
+        serviceId
+      );
+
+      const updated = await db.query.update({
         where: { id: query.id },
-        data: { aiDraft, status: 'PENDING_REVIEW' },
+        data: {
+          aiDraft: agentResult.draft,
+          status: 'PENDING_REVIEW',
+          sources: agentResult.sources as any,
+          agentLog: agentResult.agentLog as any,
+        },
       });
-      return NextResponse.json({ query: { ...query, aiDraft, status: 'PENDING_REVIEW' } }, { status: 201 });
+
+      return NextResponse.json({ query: updated }, { status: 201 });
     } catch (aiError) {
-      console.error('[AI Generation Error]', aiError);
-      // Return query even if AI fails — reviewer can still handle manually
+      console.error('[Agent Pipeline Error]', aiError);
       await db.query.update({
         where: { id: query.id },
         data: {
-          aiDraft: 'AI generation failed. Please provide a manual response.',
+          aiDraft: 'AI generation encountered an error. Reviewer can provide manual response.',
           status: 'PENDING_REVIEW',
         },
       });
@@ -70,7 +79,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/queries?serviceId=xxx&status=xxx - list queries
+// GET /api/queries?serviceId=xxx&status=xxx&mine=true
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
@@ -88,7 +97,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'serviceId is required' }, { status: 400 });
     }
 
-    // Verify membership
     const member = await db.serviceMember.findUnique({
       where: { userId_serviceId: { userId, serviceId } },
     });
@@ -97,14 +105,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // USER role can only see their own queries
+    const forceOwn = member.role === 'USER';
     const where: Record<string, unknown> = { serviceId };
     if (status) where.status = status;
-    if (mine) where.submitterId = member.id;
+    if (mine || forceOwn) where.submitterId = member.id;
 
     const queries = await db.query.findMany({
       where,
       include: {
-        submitter: { select: { id: true, name: true, email: true, avatarUrl: true } },
+        submitter: { select: { id: true, name: true, email: true, avatarUrl: true, role: true } },
         review: {
           include: {
             reviewer: { select: { id: true, name: true, email: true } },
