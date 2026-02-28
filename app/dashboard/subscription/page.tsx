@@ -5,10 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Zap, CheckCircle, Crown, Star, AlertCircle, Copy, ExternalLink,
+  Zap, CheckCircle, Star, AlertCircle, Copy, ExternalLink,
   RefreshCw, ArrowUpCircle, Shield,
 } from 'lucide-react';
-import { PLAN_LIMITS, PLAN_PRICES_ALGO } from '@/lib/subscription';
+import { PLAN_LIMITS, PLAN_PRICE_ALGO } from '@/lib/subscription';
 import type { SubscriptionTier } from '@/lib/subscription';
 
 const RECEIVER_ADDRESS = process.env.NEXT_PUBLIC_ALGORAND_RECEIVER_ADDRESS ?? '';
@@ -26,13 +26,11 @@ interface SubscriptionData {
 const TIER_ICONS: Record<SubscriptionTier, React.ReactNode> = {
   FREE: <Zap size={18} />,
   PRO: <Star size={18} />,
-  ENTERPRISE: <Crown size={18} />,
 };
 
 const TIER_COLORS: Record<SubscriptionTier, string> = {
   FREE: 'bg-neo-cream',
   PRO: 'bg-neo-blue',
-  ENTERPRISE: 'bg-neo-purple',
 };
 
 export default function SubscriptionPage() {
@@ -46,8 +44,7 @@ export default function SubscriptionPage() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Upgrade flow state
-  const [selectedTier, setSelectedTier] = useState<'PRO' | 'ENTERPRISE' | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [txId, setTxId] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState('');
@@ -92,7 +89,7 @@ export default function SubscriptionPage() {
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedTier || !txId.trim() || !activeServiceId || verifying) return;
+    if (!txId.trim() || !activeServiceId || verifying) return;
 
     setVerifying(true);
     setVerifyError('');
@@ -102,14 +99,14 @@ export default function SubscriptionPage() {
       const res = await fetch('/api/subscription/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceId: activeServiceId, tier: selectedTier, txId: txId.trim() }),
+        body: JSON.stringify({ serviceId: activeServiceId, tier: 'PRO', txId: txId.trim() }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Verification failed');
 
       setVerifySuccess(json.message);
       setTxId('');
-      setSelectedTier(null);
+      setShowUpgrade(false);
       loadSubscription();
     } catch (err) {
       setVerifyError(err instanceof Error ? err.message : 'Verification failed');
@@ -240,18 +237,18 @@ export default function SubscriptionPage() {
                 {limits.webSearch ? (
                   <span className="flex items-center gap-1 text-green-700"><CheckCircle size={12} /> Enabled</span>
                 ) : (
-                  <span className="text-neo-black/50">Disabled (PRO+)</span>
+                  <span className="text-neo-black/50">Disabled (PRO only)</span>
                 )}
               </div>
             </div>
           </div>
 
           {/* Plan Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {(['FREE', 'PRO', 'ENTERPRISE'] as SubscriptionTier[]).map((planTier) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {(['FREE', 'PRO'] as SubscriptionTier[]).map((planTier) => {
               const planLimits = PLAN_LIMITS[planTier];
               const isCurrent = tier === planTier;
-              const isPaid = planTier === 'PRO' || planTier === 'ENTERPRISE';
+              const isPaid = planTier === 'PRO';
               return (
                 <div
                   key={planTier}
@@ -269,15 +266,13 @@ export default function SubscriptionPage() {
                     )}
                   </div>
 
-                  {isPaid && (
-                    <p className="font-display font-black text-2xl">
-                      {PLAN_PRICES_ALGO[planTier as 'PRO' | 'ENTERPRISE']} ALGO
-                      <span className="text-xs font-body font-normal text-neo-black/50"> /30 days</span>
-                    </p>
-                  )}
-                  {!isPaid && (
-                    <p className="font-display font-black text-2xl">Free</p>
-                  )}
+                  <p className="font-display font-black text-2xl">
+                    {isPaid ? (
+                      <>{PLAN_PRICE_ALGO} ALGO<span className="text-xs font-body font-normal text-neo-black/50"> /30 days</span></>
+                    ) : (
+                      'Free'
+                    )}
+                  </p>
 
                   <ul className="space-y-1.5 text-xs font-body flex-1">
                     <li className="flex items-center gap-1.5">
@@ -309,7 +304,7 @@ export default function SubscriptionPage() {
                       variant="black"
                       size="sm"
                       onClick={() => {
-                        setSelectedTier(planTier as 'PRO' | 'ENTERPRISE');
+                        setShowUpgrade(true);
                         setVerifyError('');
                         setVerifySuccess('');
                       }}
@@ -324,15 +319,15 @@ export default function SubscriptionPage() {
           </div>
 
           {/* Upgrade Form */}
-          {selectedTier && (
+          {showUpgrade && (
             <div className="border-3 border-neo-black shadow-brutal bg-white">
               <div className="flex items-center justify-between px-5 py-4 border-b-3 border-neo-black bg-neo-black text-white">
                 <div className="flex items-center gap-2">
                   <ArrowUpCircle size={16} />
-                  <span className="font-display font-black">Upgrade to {PLAN_LIMITS[selectedTier].label}</span>
+                  <span className="font-display font-black">Upgrade to Pro</span>
                 </div>
                 <button
-                  onClick={() => { setSelectedTier(null); setVerifyError(''); }}
+                  onClick={() => { setShowUpgrade(false); setVerifyError(''); }}
                   className="text-white/50 hover:text-white text-xs font-display font-bold"
                 >
                   Cancel
@@ -344,7 +339,7 @@ export default function SubscriptionPage() {
                 <div className="border-3 border-neo-black bg-neo-cream p-4">
                   <p className="font-display font-black text-sm mb-3 flex items-center gap-2">
                     <span className="w-6 h-6 bg-neo-black text-white flex items-center justify-center text-xs font-bold shrink-0">1</span>
-                    Send {PLAN_PRICES_ALGO[selectedTier]} ALGO to this address
+                    Send {PLAN_PRICE_ALGO} ALGO to this address
                   </p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 font-mono text-xs bg-white border-2 border-neo-black p-2 break-all">
@@ -358,7 +353,7 @@ export default function SubscriptionPage() {
                   </div>
                   <div className="flex items-center gap-3 mt-3">
                     <span className="text-xs font-body text-neo-black/50">
-                      Network: <strong>{NETWORK}</strong> · Amount: <strong>{PLAN_PRICES_ALGO[selectedTier]} ALGO</strong>
+                      Network: <strong>{NETWORK}</strong> · Amount: <strong>{PLAN_PRICE_ALGO} ALGO</strong>
                     </span>
                     <a
                       href={`https://${NETWORK === 'mainnet' ? '' : NETWORK + '.'}algoexplorer.io/address/${RECEIVER_ADDRESS}`}

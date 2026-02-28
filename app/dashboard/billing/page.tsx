@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { CreditCard, Check, Zap, Building2, Star, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
+import { CreditCard, Check, Zap, Star, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Plan {
   id: string;
   label: string;
-  price: number;
+  priceInr: number;
   maxServices: number;
   maxReviewers: number;
   maxQueriesPerMonth: number;
@@ -29,13 +29,11 @@ interface BillingData {
 const PLAN_ICONS: Record<string, React.ReactNode> = {
   FREE: <Zap size={20} />,
   PRO: <Star size={20} />,
-  ENTERPRISE: <Building2 size={20} />,
 };
 
 const PLAN_COLORS: Record<string, string> = {
   FREE: 'bg-neo-cream',
   PRO: 'bg-neo-yellow',
-  ENTERPRISE: 'bg-neo-blue',
 };
 
 function formatLimit(val: number): string {
@@ -48,7 +46,7 @@ export default function BillingPage() {
 
   const [data, setData] = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [upgrading, setUpgrading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -60,21 +58,21 @@ export default function BillingPage() {
     load();
   }, []);
 
-  async function handleUpgrade(planId: string) {
-    setUpgrading(planId);
+  async function handleUpgrade() {
+    setUpgrading(true);
     setError('');
     try {
       const res = await fetch('/api/lemonsqueezy/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId }),
+        body: JSON.stringify({ plan: 'PRO' }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Failed to create checkout');
       window.location.href = json.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
-      setUpgrading(null);
+      setUpgrading(false);
     }
   }
 
@@ -90,7 +88,7 @@ export default function BillingPage() {
   const plans = data ? Object.values(data.plans) : [];
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="border-3 border-neo-black shadow-brutal bg-neo-yellow p-5">
         <h1 className="font-display font-black text-2xl mb-1 flex items-center gap-2">
@@ -137,9 +135,9 @@ export default function BillingPage() {
                 </p>
               )}
             </div>
-            {data.subscription?.lsCustomerId && currentPlanId !== 'FREE' && (
+            {data.subscription?.lsCustomerId && currentPlanId === 'PRO' && (
               <button
-                onClick={() => handleUpgrade(currentPlanId)}
+                onClick={handleUpgrade}
                 className="ml-auto flex items-center gap-1.5 text-xs font-display font-bold border-3 border-neo-black px-3 py-2 hover:bg-neo-cream transition-colors"
               >
                 <ExternalLink size={12} /> Manage Subscription
@@ -172,10 +170,9 @@ export default function BillingPage() {
         <p className="font-display font-bold text-xs uppercase tracking-widest text-neo-black/40 mb-3">
           Available Plans
         </p>
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           {plans.map((plan) => {
             const isCurrent = plan.id === currentPlanId;
-            const isDowngrade = plan.price < (data?.plan.price ?? 0);
             return (
               <div
                 key={plan.id}
@@ -199,11 +196,11 @@ export default function BillingPage() {
                     </div>
                   </div>
                   <p className="font-display font-black text-3xl">
-                    {plan.price === 0 ? (
+                    {plan.priceInr === 0 ? (
                       'Free'
                     ) : (
                       <>
-                        ${plan.price}
+                        ₹{plan.priceInr}
                         <span className="text-sm font-body font-normal text-neo-black/50">/mo</span>
                       </>
                     )}
@@ -218,8 +215,7 @@ export default function BillingPage() {
                     { label: `${formatLimit(plan.maxQueriesPerMonth)} queries/month` },
                     { label: 'Image attachments' },
                     { label: 'AI + human review pipeline' },
-                    ...(plan.id !== 'FREE' ? [{ label: 'Priority support' }] : []),
-                    ...(plan.id === 'ENTERPRISE' ? [{ label: 'Custom integrations' }] : []),
+                    ...(plan.id === 'PRO' ? [{ label: 'Priority support' }] : []),
                   ].map(({ label }) => (
                     <li key={label} className="flex items-start gap-2 text-sm font-body">
                       <Check size={14} className="shrink-0 mt-0.5 text-green-600" />
@@ -229,17 +225,17 @@ export default function BillingPage() {
                 </ul>
 
                 {/* CTA */}
-                {!isCurrent && !isDowngrade && plan.id !== 'FREE' && (
+                {!isCurrent && plan.id === 'PRO' && (
                   <Button
                     variant="black"
-                    onClick={() => handleUpgrade(plan.id)}
-                    disabled={upgrading !== null}
+                    onClick={handleUpgrade}
+                    disabled={upgrading}
                     className="w-full justify-center gap-2"
                   >
-                    {upgrading === plan.id ? (
+                    {upgrading ? (
                       <><Loader2 size={14} className="animate-spin" /> Redirecting…</>
                     ) : (
-                      <>Upgrade to {plan.label} <ExternalLink size={13} /></>
+                      <>Upgrade to Pro <ExternalLink size={13} /></>
                     )}
                   </Button>
                 )}

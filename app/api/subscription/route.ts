@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check if PRO/ENTERPRISE has expired — downgrade to FREE
+    // Check if PRO has expired — downgrade to FREE
     if (subscription.tier !== 'FREE' && subscription.expiresAt && subscription.expiresAt < new Date()) {
       subscription = await db.subscription.update({
         where: { serviceId },

@@ -1,14 +1,14 @@
 import { db } from './db';
 
-export type PlanId = 'FREE' | 'PRO' | 'ENTERPRISE';
+export type PlanId = 'FREE' | 'PRO';
 
 export interface Plan {
   id: PlanId;
   label: string;
-  price: number; // USD/month
-  maxServices: number;       // services owned by user
-  maxReviewers: number;      // reviewers per service
-  maxQueriesPerMonth: number; // queries per month per service
+  priceInr: number; // INR/month
+  maxServices: number;
+  maxReviewers: number;
+  maxQueriesPerMonth: number;
   lsVariantId?: string;
 }
 
@@ -16,7 +16,7 @@ export const PLANS: Record<PlanId, Plan> = {
   FREE: {
     id: 'FREE',
     label: 'Free',
-    price: 0,
+    priceInr: 0,
     maxServices: 1,
     maxReviewers: 3,
     maxQueriesPerMonth: 10,
@@ -24,20 +24,11 @@ export const PLANS: Record<PlanId, Plan> = {
   PRO: {
     id: 'PRO',
     label: 'Pro',
-    price: 19,
-    maxServices: 5,
-    maxReviewers: 20,
-    maxQueriesPerMonth: 200,
+    priceInr: 499,
+    maxServices: 10,
+    maxReviewers: 50,
+    maxQueriesPerMonth: 500,
     lsVariantId: process.env.LEMONSQUEEZY_PRO_VARIANT_ID,
-  },
-  ENTERPRISE: {
-    id: 'ENTERPRISE',
-    label: 'Enterprise',
-    price: 49,
-    maxServices: Infinity,
-    maxReviewers: Infinity,
-    maxQueriesPerMonth: Infinity,
-    lsVariantId: process.env.LEMONSQUEEZY_ENTERPRISE_VARIANT_ID,
   },
 };
 

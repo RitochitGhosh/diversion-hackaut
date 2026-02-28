@@ -1,6 +1,6 @@
-import { Check, X, Zap, Star, Building2 } from 'lucide-react';
+import { Check, X, Zap, Star } from 'lucide-react';
 
-const plans = [
+const PLANS = [
   {
     name: 'Free',
     price: 0,
@@ -19,12 +19,11 @@ const plans = [
       { label: 'Image attachments', included: true },
       { label: 'Conversation history', included: true },
       { label: 'Priority support', included: false },
-      { label: 'Custom integrations', included: false },
     ],
   },
   {
     name: 'Pro',
-    price: 19,
+    price: 499,
     icon: Star,
     bg: 'bg-neo-yellow',
     popular: true,
@@ -32,44 +31,22 @@ const plans = [
     ctaStyle: 'bg-neo-black text-white hover:bg-neo-black/80',
     href: '/api/auth/login',
     features: [
-      { label: '5 services', included: true },
-      { label: '20 reviewers / service', included: true },
-      { label: '200 queries / month', included: true },
+      { label: '10 services', included: true },
+      { label: '50 reviewers / service', included: true },
+      { label: '500 queries / month', included: true },
       { label: 'AI + human review pipeline', included: true },
       { label: 'Web search & RAG', included: true },
       { label: 'Image attachments', included: true },
       { label: 'Conversation history', included: true },
       { label: 'Priority support', included: true },
-      { label: 'Custom integrations', included: false },
     ],
   },
-  {
-    name: 'Enterprise',
-    price: 49,
-    icon: Building2,
-    bg: 'bg-neo-blue',
-    popular: false,
-    cta: 'Start Enterprise',
-    ctaStyle: 'bg-white hover:bg-neo-yellow',
-    href: '/api/auth/login',
-    features: [
-      { label: 'Unlimited services', included: true },
-      { label: 'Unlimited reviewers', included: true },
-      { label: 'Unlimited queries', included: true },
-      { label: 'AI + human review pipeline', included: true },
-      { label: 'Web search & RAG', included: true },
-      { label: 'Image attachments', included: true },
-      { label: 'Conversation history', included: true },
-      { label: 'Priority support', included: true },
-      { label: 'Custom integrations', included: true },
-    ],
-  },
-];
+] as const;
 
 export function Pricing() {
   return (
     <section id="pricing" className="py-24 px-6 md:px-12 bg-white border-t-3 border-neo-black">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-4xl mx-auto">
 
         {/* Header */}
         <div className="mb-16">
@@ -91,8 +68,8 @@ export function Pricing() {
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {plans.map(({ name, price, icon: Icon, bg, popular, cta, ctaStyle, href, features }) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start max-w-2xl mx-auto">
+          {PLANS.map(({ name, price, icon: Icon, bg, popular, cta, ctaStyle, href, features }) => (
             <div
               key={name}
               className={`relative border-3 border-neo-black flex flex-col ${bg} ${
@@ -117,7 +94,7 @@ export function Pricing() {
                   <span className="font-display font-black text-5xl leading-none">Free</span>
                 ) : (
                   <div className="flex items-end gap-1">
-                    <span className="font-display font-black text-5xl leading-none">${price}</span>
+                    <span className="font-display font-black text-5xl leading-none">₹{price}</span>
                     <span className="font-body text-neo-black/50 pb-1">/mo</span>
                   </div>
                 )}

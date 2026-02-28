@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyWebhookSignature, parseLsSubscription } from '@/lib/lemonsqueezy';
-import { PLANS } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
-const PLAN_BY_VARIANT: Record<string, 'PRO' | 'ENTERPRISE'> = {};
-// Populated at startup (variant IDs come from env)
-if (process.env.LEMONSQUEEZY_PRO_VARIANT_ID) {
-  PLAN_BY_VARIANT[process.env.LEMONSQUEEZY_PRO_VARIANT_ID] = 'PRO';
-}
-if (process.env.LEMONSQUEEZY_ENTERPRISE_VARIANT_ID) {
-  PLAN_BY_VARIANT[process.env.LEMONSQUEEZY_ENTERPRISE_VARIANT_ID] = 'ENTERPRISE';
-}
+const PRO_VARIANT_ID = process.env.LEMONSQUEEZY_PRO_VARIANT_ID ?? '';
 
 // POST /api/lemonsqueezy/webhook — receives and processes LemonSqueezy events
 export async function POST(request: NextRequest) {
@@ -36,10 +28,10 @@ export async function POST(request: NextRequest) {
 
   const sub = parseLsSubscription(payload);
   if (!sub) {
-    return NextResponse.json({ received: true }); // not a subscription event we can process
+    return NextResponse.json({ received: true });
   }
 
-  const plan = PLAN_BY_VARIANT[sub.variantId] ?? 'FREE';
+  const plan = sub.variantId === PRO_VARIANT_ID ? 'PRO' : 'FREE';
 
   switch (eventName) {
     case 'subscription_created':

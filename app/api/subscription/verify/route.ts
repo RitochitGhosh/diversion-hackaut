@@ -2,7 +2,7 @@ import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyAlgoPayment } from '@/lib/algorand';
-import { PLAN_PRICES_ALGO, PLAN_DURATION_DAYS } from '@/lib/subscription';
+import { PLAN_PRICE_ALGO, PLAN_DURATION_DAYS } from '@/lib/subscription';
 import type { SubscriptionTier } from '@/lib/subscription';
 
 export const dynamic = 'force-dynamic';
@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'serviceId, tier, and txId are required' }, { status: 400 });
     }
 
-    if (tier !== 'PRO' && tier !== 'ENTERPRISE') {
-      return NextResponse.json({ error: 'Invalid tier. Must be PRO or ENTERPRISE' }, { status: 400 });
+    if (tier !== 'PRO') {
+      return NextResponse.json({ error: 'Invalid tier. Must be PRO' }, { status: 400 });
     }
 
     const member = await db.serviceMember.findUnique({
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Algorand receiver address not configured' }, { status: 500 });
     }
 
-    const expectedAlgo = PLAN_PRICES_ALGO[tier as 'PRO' | 'ENTERPRISE'];
+    const expectedAlgo = PLAN_PRICE_ALGO;
     const verification = await verifyAlgoPayment(txId.trim(), expectedAlgo, receiverAddress);
 
     if (!verification.valid) {

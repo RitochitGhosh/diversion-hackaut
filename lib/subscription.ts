@@ -1,4 +1,4 @@
-export type SubscriptionTier = 'FREE' | 'PRO' | 'ENTERPRISE';
+export type SubscriptionTier = 'FREE' | 'PRO';
 
 export interface PlanLimits {
   queriesPerMonth: number | null; // null = unlimited
@@ -23,19 +23,9 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
     label: 'Pro',
     color: 'neo-blue',
   },
-  ENTERPRISE: {
-    queriesPerMonth: null,
-    maxKnowledgeDocs: null,
-    webSearch: true,
-    label: 'Enterprise',
-    color: 'neo-purple',
-  },
 };
 
-export const PLAN_PRICES_ALGO: Record<'PRO' | 'ENTERPRISE', number> = {
-  PRO: 10,
-  ENTERPRISE: 25,
-};
+export const PLAN_PRICE_ALGO = 10;
 
 export const PLAN_DURATION_DAYS = 30;
 
@@ -43,7 +33,6 @@ export function getTierBadgeColor(tier: SubscriptionTier): string {
   const colors: Record<SubscriptionTier, string> = {
     FREE: 'bg-neo-cream border-neo-black',
     PRO: 'bg-neo-blue border-neo-black',
-    ENTERPRISE: 'bg-neo-purple border-neo-black',
   };
   return colors[tier];
 }

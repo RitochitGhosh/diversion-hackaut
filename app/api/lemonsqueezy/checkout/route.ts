@@ -1,12 +1,12 @@
 import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckout, createCustomerPortal } from '@/lib/lemonsqueezy';
-import { PLANS, getUserPlan } from '@/lib/plans';
+import { PLANS } from '@/lib/plans';
 import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/lemonsqueezy/checkout — { plan: 'PRO' | 'ENTERPRISE' } → redirects to checkout
+// POST /api/lemonsqueezy/checkout → redirects to PRO checkout or customer portal
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -17,18 +17,18 @@ export async function POST(request: NextRequest) {
     const { sub: userId, email } = session.user;
     const { plan: planId } = await request.json();
 
-    if (!planId || planId === 'FREE') {
+    if (planId !== 'PRO') {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     }
 
-    const plan = PLANS[planId as 'PRO' | 'ENTERPRISE'];
-    if (!plan || !plan.lsVariantId) {
+    const plan = PLANS.PRO;
+    if (!plan.lsVariantId) {
       return NextResponse.json({ error: 'Plan not configured' }, { status: 400 });
     }
 
     // If user already has a paid subscription, return customer portal URL
     const existing = await db.userSubscription.findUnique({ where: { userId } });
-    if (existing?.lsCustomerId && existing.plan !== 'FREE') {
+    if (existing?.lsCustomerId && existing.plan === 'PRO') {
       const portalUrl = await createCustomerPortal(existing.lsCustomerId);
       return NextResponse.json({ url: portalUrl, type: 'portal' });
     }
