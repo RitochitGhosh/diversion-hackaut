@@ -2,6 +2,7 @@ import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateServiceCode } from '@/lib/utils';
+import { getUserPlan, countOwnedServices } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,21 @@ export async function POST(request: NextRequest) {
 
     if (!serviceName?.trim()) {
       return NextResponse.json({ error: 'Service name is required' }, { status: 400 });
+    }
+
+    // --- Plan limit: max services per user ---
+    const plan = await getUserPlan(userId);
+    if (plan.maxServices !== Infinity) {
+      const owned = await countOwnedServices(userId);
+      if (owned >= plan.maxServices) {
+        return NextResponse.json(
+          {
+            error: `Your ${plan.label} plan allows a maximum of ${plan.maxServices} service${plan.maxServices > 1 ? 's' : ''}. Upgrade your plan to create more.`,
+            upgradeRequired: true,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const serviceCode = generateServiceCode();

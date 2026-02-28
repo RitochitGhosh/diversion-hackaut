@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/dashboard/navbar';
 import { db } from '@/lib/db';
 import Link from 'next/link';
-import { LayoutDashboard, ClipboardList, MessageSquare, Settings, BookOpen, Share2, History } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, MessageSquare, Settings, BookOpen, Share2, History, CreditCard } from 'lucide-react';
 
 export default async function DashboardLayout({
   children,
@@ -37,6 +37,7 @@ export default async function DashboardLayout({
     ...(membership?.role === 'ADMIN'
       ? [{ href: '/dashboard/admin', label: 'Admin', icon: Settings }]
       : [{ href: '/dashboard/admin', label: 'Services', icon: Settings }]),
+    { href: '/dashboard/billing', label: 'Billing', icon: CreditCard },
   ];
 
   return (

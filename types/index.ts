@@ -48,6 +48,7 @@ export interface QueryWithReview {
   finalAnswer: string | null;
   sources: Source[] | null;
   agentLog: AgentLog | null;
+  imageUrls: string[] | null;
   createdAt: Date;
   updatedAt: Date;
   submitter: {

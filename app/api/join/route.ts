@@ -1,6 +1,7 @@
 import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getUserPlan, countReviewers } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,20 @@ export async function POST(request: NextRequest) {
         { error: 'You are already a member of this service.', membership: existing },
         { status: 409 }
       );
+    }
+
+    // --- Plan limit: max reviewers per service ---
+    const ownerPlan = await getUserPlan(service.ownerId);
+    if (ownerPlan.maxReviewers !== Infinity) {
+      const reviewerCount = await countReviewers(service.id);
+      if (reviewerCount >= ownerPlan.maxReviewers) {
+        return NextResponse.json(
+          {
+            error: `This service has reached its reviewer limit (${ownerPlan.maxReviewers} on the ${ownerPlan.label} plan). The service owner must upgrade to add more reviewers.`,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Can't join your own service as a reviewer (already admin)

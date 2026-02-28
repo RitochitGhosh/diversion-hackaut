@@ -64,6 +64,7 @@ model Query {
   finalAnswer String?     @db.Text
   sources     Json?       // [{type:'web'|'rag', title, url?, excerpt}]
   agentLog    Json?       // {usedSearch, usedRAG, searchQuery?, ragCount}
+  imageUrls   Json?       // string[] — Cloudinary URLs attached by user
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -128,6 +129,21 @@ model KnowledgeChunk {
   document      KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
+}
+
+model UserSubscription {
+  id               String    @id @default(cuid())
+  userId           String    @unique // Auth0 sub
+  plan             String    @default("FREE") // FREE | PRO | ENTERPRISE
+  lsSubscriptionId String?   @unique // LemonSqueezy subscription ID
+  lsCustomerId     String?   // LemonSqueezy customer ID
+  lsOrderId        String?   // LemonSqueezy order ID
+  status           String    @default("active") // active | cancelled | expired
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId])
 }
 
 model Subscription {

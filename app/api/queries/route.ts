@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { generateInitialDraftWithAgent } from '@/lib/genai';
 import { publishNotification } from '@/lib/rabbitmq';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { getUserPlan, countQueriesThisMonth } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     const { sub: userId } = session.user;
     const body = await request.json();
-    const { content, serviceId } = body;
+    const { content, serviceId, imageUrls = [] } = body;
 
     // --- Content Validation ---
     if (!content?.trim()) {
@@ -57,13 +58,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You are not a member of this service' }, { status: 403 });
     }
 
+    // --- Plan limit: queries per month ---
+    const serviceOwner = await db.service.findUnique({
+      where: { id: serviceId },
+      select: { ownerId: true },
+    });
+    if (serviceOwner) {
+      const ownerPlan = await getUserPlan(serviceOwner.ownerId);
+      if (ownerPlan.maxQueriesPerMonth !== Infinity) {
+        const used = await countQueriesThisMonth(serviceId);
+        if (used >= ownerPlan.maxQueriesPerMonth) {
+          return NextResponse.json(
+            {
+              error: `This service has reached its monthly query limit (${ownerPlan.maxQueriesPerMonth} on the ${ownerPlan.label} plan). The service owner must upgrade to continue.`,
+            },
+            { status: 429 }
+          );
+        }
+      }
+    }
+
     // Create query
+    const validImageUrls = Array.isArray(imageUrls)
+      ? (imageUrls as unknown[]).filter((u) => typeof u === 'string').slice(0, 3)
+      : [];
+
     const query = await db.query.create({
       data: {
         content: content.trim(),
         submitterId: member.id,
         serviceId,
         status: 'PENDING_AI',
+        imageUrls: validImageUrls.length ? validImageUrls : undefined,
       },
     });
 
@@ -95,10 +121,15 @@ export async function POST(request: NextRequest) {
       )
     );
 
-    // Run agent pipeline
+    // Run agent pipeline — augment content with image context for the AI
+    const contentForAI =
+      validImageUrls.length > 0
+        ? `${content.trim()}\n\n[User has attached ${validImageUrls.length} image(s) for reference: ${validImageUrls.join(', ')}]`
+        : content.trim();
+
     try {
       const agentResult = await generateInitialDraftWithAgent(
-        content.trim(),
+        contentForAI,
         member.service.name,
         serviceId
       );

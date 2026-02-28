@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { RichAnswer } from '@/components/ui/rich-answer';
 import { formatDate, STATUS_LABELS } from '@/lib/utils';
 import {
   ChevronDown, ChevronUp, Clock, CheckCircle, XCircle,
-  Edit3, Loader, Globe, BookOpen, Search, Zap,
+  Edit3, Loader, Globe, BookOpen, Search, Zap, ImageIcon, X,
 } from 'lucide-react';
 import type { QueryWithReview, QueryStatus, Source, AgentLog } from '@/types';
 
@@ -105,10 +106,60 @@ function SourcesList({ sources }: { sources: Source[] }) {
   );
 }
 
+/** Lightbox-style full-screen image overlay */
+function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <button
+        className="absolute top-4 right-4 w-10 h-10 bg-white border-3 border-neo-black flex items-center justify-center hover:bg-neo-orange transition-colors"
+        onClick={onClose}
+      >
+        <X size={18} />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt="Attachment"
+        className="max-w-full max-h-[90vh] border-3 border-white object-contain"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
+function AttachedImages({ urls }: { urls: string[] }) {
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  return (
+    <>
+      <div className="flex flex-wrap gap-2 mt-2">
+        {urls.map((url, i) => (
+          <button
+            key={i}
+            onClick={() => setLightbox(url)}
+            className="w-16 h-16 border-3 border-neo-black overflow-hidden hover:opacity-80 transition-opacity shrink-0 shadow-brutal-sm"
+            title="Click to enlarge"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt={`attachment ${i + 1}`} className="w-full h-full object-cover" />
+          </button>
+        ))}
+        <span className="self-end text-xs text-neo-black/40 font-body flex items-center gap-1">
+          <ImageIcon size={11} /> {urls.length} image{urls.length > 1 ? 's' : ''}
+        </span>
+      </div>
+      {lightbox && <ImageLightbox src={lightbox} onClose={() => setLightbox(null)} />}
+    </>
+  );
+}
+
 export function QueryCard({ query }: QueryCardProps) {
   const [expanded, setExpanded] = useState(false);
   const agentLog = query.agentLog as AgentLog | null;
   const sources = (query.sources as Source[] | null) ?? [];
+  const imageUrls = (query.imageUrls as string[] | null) ?? [];
 
   return (
     <div className="border-3 border-neo-black shadow-brutal bg-white">
@@ -126,6 +177,11 @@ export function QueryCard({ query }: QueryCardProps) {
               {STATUS_LABELS[query.status]}
             </Badge>
             {agentLog && <AgentBadges agentLog={agentLog} />}
+            {imageUrls.length > 0 && (
+              <span className="flex items-center gap-1 text-xs font-display font-bold border-2 border-neo-black bg-neo-cream px-2 py-0.5">
+                <ImageIcon size={10} /> {imageUrls.length} img
+              </span>
+            )}
             <span className="text-xs text-neo-black/40 font-body">{formatDate(query.createdAt)}</span>
           </div>
         </div>
@@ -136,10 +192,11 @@ export function QueryCard({ query }: QueryCardProps) {
 
       {expanded && (
         <div className="border-t-3 border-neo-black">
-          {/* Full query */}
+          {/* Full query + images */}
           <div className="p-4 bg-neo-cream border-b-3 border-neo-black">
             <p className="font-display font-bold text-xs uppercase tracking-wide text-neo-black/40 mb-2">Query</p>
             <p className="font-body text-sm leading-relaxed">{query.content}</p>
+            {imageUrls.length > 0 && <AttachedImages urls={imageUrls} />}
           </div>
 
           {/* Agent pipeline info */}
@@ -196,7 +253,7 @@ export function QueryCard({ query }: QueryCardProps) {
             </div>
           )}
 
-          {/* Final Answer */}
+          {/* Final Answer — rendered with RichAnswer (markdown + YouTube) */}
           {query.finalAnswer && (
             <div className="p-4">
               <div className="flex items-center gap-2 mb-3">
@@ -204,18 +261,7 @@ export function QueryCard({ query }: QueryCardProps) {
                 <p className="font-display font-black text-sm">Final Answer</p>
               </div>
               <div className="border-3 border-neo-black bg-white p-4">
-                <div
-                  className="prose-neo text-sm"
-                  dangerouslySetInnerHTML={{
-                    __html: query.finalAnswer
-                      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-                      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-                      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                      .replace(/`([^`]+)`/g, '<code>$1</code>')
-                      .replace(/^- (.+)$/gm, '<li>$1</li>')
-                      .replace(/\n\n/g, '<br/><br/>')
-                  }}
-                />
+                <RichAnswer content={query.finalAnswer} />
               </div>
             </div>
           )}
