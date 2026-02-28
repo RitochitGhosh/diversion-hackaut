@@ -30,14 +30,32 @@ export function QueryForm({ serviceId, onQuerySubmitted }: QueryFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function uploadOne(img: UploadedImage, index: number) {
-    const formData = new FormData();
-    formData.append('image', img.file);
-    try {
-      const res = await fetch('/api/upload/image', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Upload failed');
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UNSIGNED_PRESET;
+
+    if (!cloudName || !uploadPreset) {
       setImages((prev) =>
-        prev.map((im, i) => (i === index ? { ...im, url: data.url, uploading: false } : im))
+        prev.map((im, i) =>
+          i === index ? { ...im, error: 'Image upload not configured', uploading: false } : im
+        )
+      );
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', img.file);
+      formData.append('upload_preset', uploadPreset);
+
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: 'POST', body: formData }
+      );
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error?.message ?? 'Upload failed');
+
+      setImages((prev) =>
+        prev.map((im, i) => (i === index ? { ...im, url: data.secure_url, uploading: false } : im))
       );
     } catch (err) {
       setImages((prev) =>
