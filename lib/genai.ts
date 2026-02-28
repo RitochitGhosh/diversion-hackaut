@@ -86,6 +86,7 @@ export async function generateInitialDraftWithAgent(
       const searchQuery = routing.searchQuery || query;
       agentLog.searchQuery = searchQuery;
       const results = await webSearch(searchQuery);
+      console.log("SELECTED_WEB_PATH: ", results);
       if (results.length > 0) {
         agentLog.usedSearch = true;
         for (const r of results) {
@@ -148,7 +149,8 @@ async function generateDraftWithContext(
   if (ragSources.length > 0) {
     contextSection += `\n\n## Relevant Knowledge Base Excerpts:\n`;
     ragSources.forEach((s, i) => {
-      contextSection += `[KB-${i + 1}] From "${s.title}":\n${s.excerpt}\n\n`;
+      contextSection
+       += `[KB-${i + 1}] From "${s.title}":\n${s.excerpt}\n\n`;
     });
   }
 

@@ -85,27 +85,34 @@ export interface LsSubscriptionData {
 export function parseLsSubscription(payload: any): LsSubscriptionData | null {
   try {
     const attrs = payload.data?.attributes ?? {};
-    const customData = attrs.first_subscription_item?.created_at
-      ? attrs.custom_data ?? {}
-      : (attrs.first_order_item?.meta?.custom_data ?? attrs.custom_data ?? {});
-    const userId = customData.user_id ?? attrs.custom_data?.user_id ?? '';
-    if (!userId) return null;
 
-    const lsStatus = attrs.status as string; // active | cancelled | expired
-    const endsAt = attrs.ends_at ? new Date(attrs.ends_at) : null;
+    // LemonSqueezy places custom_data inside meta, not data.attributes
+    const userId: string =
+      payload.meta?.custom_data?.user_id ??
+      attrs.custom_data?.user_id ??
+      '';
+
+    if (!userId) {
+      console.warn('[LS] parseLsSubscription: no user_id in meta.custom_data or attributes.custom_data');
+      return null;
+    }
+
+    const lsStatus = attrs.status as string; // active | cancelled | expired | past_due
+    const endsAt   = attrs.ends_at   ? new Date(attrs.ends_at)   : null;
     const renewsAt = attrs.renews_at ? new Date(attrs.renews_at) : null;
 
     return {
       lsSubscriptionId: String(payload.data?.id),
-      lsCustomerId: String(attrs.customer_id),
-      lsOrderId: String(attrs.order_id ?? ''),
-      variantId: String(attrs.variant_id),
-      status: lsStatus,
+      lsCustomerId:     String(attrs.customer_id),
+      lsOrderId:        String(attrs.order_id ?? ''),
+      variantId:        String(attrs.variant_id),
+      status:           lsStatus,
       currentPeriodEnd: renewsAt ?? endsAt,
       userId,
-      userEmail: attrs.user_email ?? '',
+      userEmail:        attrs.user_email ?? '',
     };
-  } catch {
+  } catch (err) {
+    console.error('[LS] parseLsSubscription threw:', err);
     return null;
   }
 }
