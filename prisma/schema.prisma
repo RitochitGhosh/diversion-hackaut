@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  serviceCode String   @unique
+  name        String
+  description String?
+  logoEmoji   String   @default("🏢")
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members ServiceMember[]
+  queries Query[]
+
+  @@index([ownerId])
+}
+
+model ServiceMember {
+  id        String   @id @default(cuid())
+  userId    String
+  email     String
+  name      String?
+  avatarUrl String?
+  role      Role     @default(REVIEWER)
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  queries Query[]  @relation("QuerySubmitter")
+  reviews Review[]
+
+  @@unique([userId, serviceId])
+  @@index([userId])
+  @@index([serviceId])
+}
+
+enum Role {
+  ADMIN
+  REVIEWER
+}
+
+model Query {
+  id          String      @id @default(cuid())
+  content     String      @db.Text
+  submitterId String
+  submitter   ServiceMember @relation("QuerySubmitter", fields: [submitterId], references: [id])
+  serviceId   String
+  service     Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  status      QueryStatus @default(PENDING_AI)
+  aiDraft     String?     @db.Text
+  finalAnswer String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  review Review?
+
+  @@index([serviceId, status])
+  @@index([submitterId])
+}
+
+enum QueryStatus {
+  PENDING_AI
+  PENDING_REVIEW
+  APPROVED
+  EDITED
+  REJECTED
+  ANSWERED
+}
+
+model Review {
+  id            String       @id @default(cuid())
+  action        ReviewAction
+  editedContent String?      @db.Text
+  note          String?      @db.Text
+  reviewerId    String
+  reviewer      ServiceMember @relation(fields: [reviewerId], references: [id])
+  queryId       String       @unique
+  query         Query        @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+
+  @@index([reviewerId])
+}
+
+enum ReviewAction {
+  APPROVED
+  EDITED
+  REJECTED
+}

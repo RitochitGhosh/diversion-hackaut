@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-body bg-white text-neo-black antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .neo-card {
+    @apply border-3 border-neo-black shadow-brutal bg-white;
+  }
+
+  .neo-card-yellow {
+    @apply border-3 border-neo-black shadow-brutal bg-neo-yellow;
+  }
+
+  .neo-card-blue {
+    @apply border-3 border-neo-black shadow-brutal bg-neo-blue;
+  }
+
+  .neo-card-pink {
+    @apply border-3 border-neo-black shadow-brutal bg-neo-pink;
+  }
+
+  .neo-card-green {
+    @apply border-3 border-neo-black shadow-brutal bg-neo-green;
+  }
+
+  .neo-card-purple {
+    @apply border-3 border-neo-black shadow-brutal bg-neo-purple;
+  }
+
+  .neo-btn {
+    @apply inline-flex items-center justify-center gap-2 font-display font-bold border-3 border-neo-black shadow-brutal
+           transition-all duration-100 cursor-pointer select-none
+           hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none
+           active:translate-x-[4px] active:translate-y-[4px] active:shadow-none;
+  }
+
+  .neo-btn-yellow {
+    @apply neo-btn bg-neo-yellow text-neo-black;
+  }
+
+  .neo-btn-black {
+    @apply neo-btn bg-neo-black text-white;
+  }
+
+  .neo-btn-white {
+    @apply neo-btn bg-white text-neo-black;
+  }
+
+  .neo-btn-green {
+    @apply neo-btn bg-neo-green text-neo-black;
+  }
+
+  .neo-btn-red {
+    @apply neo-btn bg-neo-orange text-neo-black;
+  }
+
+  .neo-btn-blue {
+    @apply neo-btn bg-neo-blue text-neo-black;
+  }
+
+  .neo-input {
+    @apply w-full border-3 border-neo-black rounded-none px-4 py-3 font-body text-neo-black
+           placeholder:text-gray-400 bg-white
+           focus:outline-none focus:shadow-brutal
+           transition-shadow duration-100;
+  }
+
+  .neo-textarea {
+    @apply neo-input resize-none;
+  }
+
+  .neo-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 border-2 border-neo-black font-display font-bold text-xs;
+  }
+
+  .neo-section {
+    @apply py-16 px-4 md:px-8 max-w-7xl mx-auto;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-left: 2px solid #0A0A0A;
+}
+::-webkit-scrollbar-thumb {
+  background: #0A0A0A;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333;
+}
+
+/* Prose styles for AI-generated markdown content */
+.prose-neo {
+  @apply text-neo-black;
+}
+.prose-neo h2 { @apply font-display font-bold text-xl mt-6 mb-3 pb-2 border-b-2 border-neo-black; }
+.prose-neo h3 { @apply font-display font-bold text-lg mt-4 mb-2; }
+.prose-neo p { @apply mb-3 leading-relaxed; }
+.prose-neo ul { @apply list-disc list-inside mb-3 space-y-1; }
+.prose-neo ol { @apply list-decimal list-inside mb-3 space-y-1; }
+.prose-neo code { @apply font-mono bg-neo-yellow px-1.5 py-0.5 border border-neo-black text-sm; }
+.prose-neo pre { @apply bg-neo-black text-white p-4 my-3 overflow-x-auto font-mono text-sm border-3 border-neo-black; }
+.prose-neo pre code { @apply bg-transparent border-none p-0 text-white; }
+.prose-neo strong { @apply font-bold; }
+.prose-neo blockquote { @apply border-l-4 border-neo-black pl-4 italic bg-neo-cream py-2; }
