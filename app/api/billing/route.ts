@@ -1,7 +1,7 @@
 import { getSession } from '@auth0/nextjs-auth0';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getUserPlan, countOwnedServices, PLANS } from '@/lib/plans';
+import { getUserPlan, countOwnedServices, getPlans } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ export async function GET() {
       plan,
       subscription: subscription ?? null,
       ownedServices,
-      plans: PLANS,
+      plans: getPlans(),
     });
   } catch (error) {
     console.error('[GET /api/billing]', error);

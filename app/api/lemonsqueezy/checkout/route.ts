@@ -1,7 +1,7 @@
 import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckout, createCustomerPortal } from '@/lib/lemonsqueezy';
-import { PLANS } from '@/lib/plans';
+import { getPlans } from '@/lib/plans';
 import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -21,9 +21,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     }
 
-    const plan = PLANS.PRO;
+    const plan = getPlans().PRO;
     if (!plan.lsVariantId) {
-      return NextResponse.json({ error: 'Plan not configured' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'PRO plan not configured — set LEMONSQUEEZY_PRO_VARIANT_ID in environment variables' },
+        { status: 503 }
+      );
     }
 
     // If user already has a paid subscription, return customer portal URL

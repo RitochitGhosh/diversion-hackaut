@@ -12,25 +12,31 @@ export interface Plan {
   lsVariantId?: string;
 }
 
-export const PLANS: Record<PlanId, Plan> = {
-  FREE: {
-    id: 'FREE',
-    label: 'Free',
-    priceInr: 0,
-    maxServices: 1,
-    maxReviewers: 3,
-    maxQueriesPerMonth: 10,
-  },
-  PRO: {
-    id: 'PRO',
-    label: 'Pro',
-    priceInr: 499,
-    maxServices: 10,
-    maxReviewers: 50,
-    maxQueriesPerMonth: 500,
-    lsVariantId: process.env.LEMONSQUEEZY_PRO_VARIANT_ID,
-  },
-};
+export function getPlans(): Record<PlanId, Plan> {
+  return {
+    FREE: {
+      id: 'FREE',
+      label: 'Free',
+      priceInr: 0,
+      maxServices: 1,
+      maxReviewers: 3,
+      maxQueriesPerMonth: 10,
+    },
+    PRO: {
+      id: 'PRO',
+      label: 'Pro',
+      priceInr: 499,
+      maxServices: 10,
+      maxReviewers: 50,
+      maxQueriesPerMonth: 500,
+      // Read at call-time so Vercel env vars are always picked up
+      lsVariantId: process.env.LEMONSQUEEZY_PRO_VARIANT_ID,
+    },
+  };
+}
+
+// Backwards-compat alias — do not use in checkout/billing paths
+export const PLANS = getPlans();
 
 /** Get (or auto-create FREE) the UserSubscription for a user. */
 export async function getUserPlan(userId: string): Promise<Plan> {

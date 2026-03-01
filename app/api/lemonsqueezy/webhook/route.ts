@@ -4,11 +4,9 @@ import { verifyWebhookSignature, parseLsSubscription } from '@/lib/lemonsqueezy'
 
 export const dynamic = 'force-dynamic';
 
-const PRO_VARIANT_ID = process.env.LEMONSQUEEZY_PRO_VARIANT_ID ?? '';
-
 // POST /api/lemonsqueezy/webhook — receives and processes LemonSqueezy events
 export async function POST(request: NextRequest) {
-  const rawBody = await request.text();
+  const rawBody   = await request.text();
   const signature = request.headers.get('x-signature') ?? '';
 
   if (!verifyWebhookSignature(rawBody, signature)) {
@@ -28,55 +26,98 @@ export async function POST(request: NextRequest) {
 
   const sub = parseLsSubscription(payload);
   if (!sub) {
+    console.warn('[LS Webhook] Could not parse subscription — missing user_id?');
     return NextResponse.json({ received: true });
   }
 
-  const plan = sub.variantId === PRO_VARIANT_ID ? 'PRO' : 'FREE';
+  // Read at request-time so Vercel env vars are always current
+  const proVariantId = process.env.LEMONSQUEEZY_PRO_VARIANT_ID ?? '';
+  const resolvedPlan = sub.variantId === proVariantId ? 'PRO' : 'FREE';
 
   switch (eventName) {
+    // ── Subscription activated / renewed ─────────────────────────────────────
     case 'subscription_created':
-    case 'subscription_updated':
-    case 'subscription_resumed': {
-      const newStatus = sub.status === 'active' ? 'active' : sub.status;
+    case 'subscription_updated': {
+      const plan = sub.status === 'active' ? resolvedPlan : 'FREE';
       await db.userSubscription.upsert({
-        where: { userId: sub.userId },
+        where:  { userId: sub.userId },
         create: {
-          userId: sub.userId,
-          plan: sub.status === 'active' ? plan : 'FREE',
+          userId:           sub.userId,
+          plan,
           lsSubscriptionId: sub.lsSubscriptionId,
-          lsCustomerId: sub.lsCustomerId,
-          lsOrderId: sub.lsOrderId,
-          status: newStatus,
+          lsCustomerId:     sub.lsCustomerId,
+          lsOrderId:        sub.lsOrderId,
+          status:           sub.status,
           currentPeriodEnd: sub.currentPeriodEnd,
         },
         update: {
-          plan: sub.status === 'active' ? plan : 'FREE',
+          plan,
           lsSubscriptionId: sub.lsSubscriptionId,
-          lsCustomerId: sub.lsCustomerId,
-          status: newStatus,
+          lsCustomerId:     sub.lsCustomerId,
+          status:           sub.status,
           currentPeriodEnd: sub.currentPeriodEnd,
         },
       });
       break;
     }
 
-    case 'subscription_cancelled': {
-      await db.userSubscription.updateMany({
-        where: { lsSubscriptionId: sub.lsSubscriptionId },
-        data: { status: 'cancelled', currentPeriodEnd: sub.currentPeriodEnd },
+    // ── User un-cancelled (resumed) — restore full access ─────────────────────
+    case 'subscription_resumed': {
+      // LS sends status: 'active' when resumed; renews_at is set again
+      await db.userSubscription.upsert({
+        where:  { userId: sub.userId },
+        create: {
+          userId:           sub.userId,
+          plan:             resolvedPlan,
+          lsSubscriptionId: sub.lsSubscriptionId,
+          lsCustomerId:     sub.lsCustomerId,
+          lsOrderId:        sub.lsOrderId,
+          status:           'active',
+          currentPeriodEnd: sub.currentPeriodEnd,
+        },
+        update: {
+          plan:             resolvedPlan,   // restore PRO
+          status:           'active',       // clear 'cancelled'
+          currentPeriodEnd: sub.currentPeriodEnd,
+        },
       });
       break;
     }
 
+    // ── User cancelled — keep plan active until period ends ───────────────────
+    case 'subscription_cancelled': {
+      // Do NOT downgrade plan here; getUserPlan() downgrades after currentPeriodEnd passes.
+      // Use userId (always present after parseLsSubscription) so we never miss the row.
+      await db.userSubscription.upsert({
+        where:  { userId: sub.userId },
+        create: {
+          userId:           sub.userId,
+          plan:             resolvedPlan,
+          lsSubscriptionId: sub.lsSubscriptionId,
+          lsCustomerId:     sub.lsCustomerId,
+          lsOrderId:        sub.lsOrderId,
+          status:           'cancelled',
+          currentPeriodEnd: sub.currentPeriodEnd, // ends_at from LS
+        },
+        update: {
+          status:           'cancelled',
+          currentPeriodEnd: sub.currentPeriodEnd, // when access truly ends
+        },
+      });
+      break;
+    }
+
+    // ── Period ended after cancellation ───────────────────────────────────────
     case 'subscription_expired': {
       await db.userSubscription.updateMany({
         where: { lsSubscriptionId: sub.lsSubscriptionId },
-        data: { plan: 'FREE', status: 'expired', lsSubscriptionId: null },
+        data:  { plan: 'FREE', status: 'expired', lsSubscriptionId: null },
       });
       break;
     }
 
     default:
+      console.log('[LS Webhook] Unhandled event (no-op):', eventName);
       break;
   }
 
