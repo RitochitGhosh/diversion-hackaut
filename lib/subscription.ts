@@ -25,9 +25,6 @@ export const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
   },
 };
 
-export const PLAN_PRICE_ALGO = 10;
-
-export const PLAN_DURATION_DAYS = 30;
 
 export function getTierBadgeColor(tier: SubscriptionTier): string {
   const colors: Record<SubscriptionTier, string> = {

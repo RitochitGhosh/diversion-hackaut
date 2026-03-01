@@ -70,8 +70,7 @@ export async function webSearch(query: string): Promise<SearchResult[]> {
 
 async function tavilySearch(query: string): Promise<SearchResult[]> {
   if (!env.TAVILY_API_KEY) {
-    console.log("TAVILY_API_KEY missing!");
-    process.exit(1);
+    throw new Error('TAVILY_API_KEY is not configured');
   }
   const res = await fetch('https://api.tavily.com/search', {
     method: 'POST',

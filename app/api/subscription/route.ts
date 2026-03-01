@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     if (subscription.tier !== 'FREE' && subscription.expiresAt && subscription.expiresAt < new Date()) {
       subscription = await db.subscription.update({
         where: { serviceId },
-        data: { tier: 'FREE', algoTxId: null, walletAddress: null, expiresAt: null },
+        data: { tier: 'FREE', expiresAt: null },
       });
     }
 

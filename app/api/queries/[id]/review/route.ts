@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { generateDetailedAnswer } from '@/lib/genai';
 import { publishNotification } from '@/lib/rabbitmq';
-import type { Source } from '@/types';
+import type { Source } from '@/lib/genai';
 
 export const dynamic = 'force-dynamic';
 
